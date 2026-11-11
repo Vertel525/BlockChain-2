@@ -11,9 +11,6 @@ uint32_t rotateLeft(uint32_t value, int bits)
 {
     return (value << bits) | (value >> (32 - bits));
 }
-
-// Mokomoji, savarankiskai sukurta 256 bitu maisos funkcija.
-// Ji nera SHA-256 ir neskirta tikram saugumo naudojimui.
 string hashText(string text)
 {
     uint32_t h[8] = {
