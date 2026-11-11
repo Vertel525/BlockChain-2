@@ -53,6 +53,8 @@ int findUserIndex(const Blockchain &blockchain, string key);
 
 // transactions.cpp
 void generateTransactions(Blockchain &blockchain, int count);
+bool validateTransaction(const Blockchain& blockchain,
+    const Transaction& transaction);
 string transactionToString(const Transaction &transaction);
 string calculateTransactionId(const Transaction &transaction);
 bool transactionExistsInChain(const Blockchain &blockchain, string id);
