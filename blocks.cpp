@@ -5,21 +5,50 @@
 #include <chrono>
 #include <climits>
 
-string calculateTransactionRoot(const vector<Transaction> &transactions, int version)
+
+string calculateTransactionRoot(
+    const vector<Transaction>& transactions,
+    int version)
 {
-    // v0.1: paprastas transakciju ID sujungimas.
-    // Tikras Merkle medis bus idiegtas atskirame v0.2 etape.
-    string data = "";
+    if (transactions.empty())
+    {
+        return hashText("");
+    }
+
+    vector<string> hashes;
 
     for (int i = 0; i < (int)transactions.size(); i++)
     {
-        if (i > 0)
+        hashes.push_back(transactions[i].transactionId);
+    }
+
+    while (hashes.size() > 1)
+    {
+        vector<string> newHashes;
+
+        for (int i = 0; i < (int)hashes.size(); i += 2)
         {
-            data += "|";
+            string left = hashes[i];
+            string right;
+
+            if (i + 1 < (int)hashes.size())
+            {
+                right = hashes[i + 1];
+            }
+            else
+            {
+                right = left;
+            }
+
+            newHashes.push_back(hashText(left + right));
         }
 
-        data += transactions[i].transactionId;
+        hashes = newHashes;
     }
+
+    return hashes[0];
+}
+
 
     return hashText(data);
 }
@@ -138,8 +167,6 @@ void processTransactions(Blockchain &blockchain)
 
             if (tempBalances[sender] < transaction.amount)
             {
-                // Siuntejui siuo metu truksta lesu. Paliekame ja fonde,
-                // nes velesniame bloke balansas dar gali pasikeisti.
                 continue;
             }
 
@@ -201,7 +228,6 @@ void processTransactions(Blockchain &blockchain)
             break;
         }
 
-        // Balansus pakeiciame tik po sekmingo bloko patikrinimo.
         for (int i = 0; i < (int)block.transactions.size(); i++)
         {
             const Transaction &transaction = block.transactions[i];
