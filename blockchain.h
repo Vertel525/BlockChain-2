@@ -1,0 +1,73 @@
+#ifndef BLOCKCHAIN_H
+#define BLOCKCHAIN_H
+
+#include <iostream>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+struct User
+{
+    string name;
+    string publicKey;
+    long long initialBalance;
+    long long balance;
+};
+
+struct Transaction
+{
+    string sender;
+    string receiver;
+    long long amount;
+    int sequence;
+    string transactionId;
+};
+
+struct Block
+{
+    int height;
+    string prevHash;
+    long long timestamp;
+    int version;
+    string txRoot;
+    unsigned long long nonce;
+    int difficulty;
+    string hash;
+    vector<Transaction> transactions;
+};
+
+struct Blockchain
+{
+    vector<User> users;
+    vector<Transaction> pool;
+    vector<Block> chain;
+    long long initialTotalMoney = 0;
+    int acceptedTransactions = 0;
+    int rejectedTransactions = 0;
+};
+
+// users.cpp
+void generateUsers(Blockchain &blockchain, int count);
+int findUserIndex(const Blockchain &blockchain, string key);
+
+// transactions.cpp
+void generateTransactions(Blockchain &blockchain, int count);
+string transactionToString(const Transaction &transaction);
+string calculateTransactionId(const Transaction &transaction);
+bool transactionExistsInChain(const Blockchain &blockchain, string id);
+bool transactionExistsInList(const vector<Transaction> &transactions, string id);
+
+// blocks.cpp
+string calculateTransactionRoot(const vector<Transaction> &transactions, int version);
+string calculateBlockHash(const Block &block);
+void createGenesisBlock(Blockchain &blockchain);
+bool mineBlock(Block &block, unsigned long long maxAttempts);
+void processTransactions(Blockchain &blockchain);
+void printSummary(const Blockchain &blockchain);
+
+// validation.cpp
+bool validProof(const Block &block);
+bool validateBlock(const Blockchain &blockchain, const Block &block);
+
+#endif
