@@ -1,9 +1,11 @@
+
 #ifndef BLOCKCHAIN_H
 #define BLOCKCHAIN_H
 
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 using namespace std;
 
@@ -44,6 +46,7 @@ struct Blockchain
     vector<User> users;
     vector<Transaction> pool;
     vector<Block> chain;
+    unordered_map<string, int> userIndexes;
 
     long long initialTotalMoney = 0;
     int acceptedTransactions = 0;
