@@ -1,10 +1,53 @@
 #include "blockchain.h"
 #include "hash.h"
-#include <cstdlib>
-#include <ctime>
 #include <chrono>
+#include <ctime>
+#include <sstream>
+#include <iomanip>
 #include <climits>
 
+
+using namespace std;
+
+int hexValue(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+
+    return -1;
+}
+
+string hexToBytes(const string& hex)
+{
+    if (hex.length() % 2 != 0)
+    {
+        return "";
+    }
+
+    string bytes;
+
+    for (int i = 0; i < (int)hex.length(); i += 2)
+    {
+        int high = hexValue(hex[i]);
+        int low = hexValue(hex[i + 1]);
+
+        if (high == -1 || low == -1)
+        {
+            return "";
+        }
+
+        char byte = (char)(high * 16 + low);
+        bytes.push_back(byte);
+    }
+
+    return bytes;
+}
 
 string calculateTransactionRoot(
     const vector<Transaction>& transactions,
@@ -28,16 +71,21 @@ string calculateTransactionRoot(
 
         for (int i = 0; i < (int)hashes.size(); i += 2)
         {
-            string left = hashes[i];
+            string left = hexToBytes(hashes[i]);
             string right;
 
             if (i + 1 < (int)hashes.size())
             {
-                right = hashes[i + 1];
+                right = hexToBytes(hashes[i + 1]);
             }
             else
             {
                 right = left;
+            }
+
+            if (left.empty() || right.empty())
+            {
+                return "";
             }
 
             newHashes.push_back(hashText(left + right));
@@ -50,13 +98,11 @@ string calculateTransactionRoot(
 }
 
 
-    return hashText(data);
-}
-
-string calculateBlockHash(const Block &block)
+string calculateBlockHash(const Block& block)
 {
-    string data =
-        to_string(block.height) + "|" +
+    string data;
+
+    data = to_string(block.height) + "|" +
         block.prevHash + "|" +
         to_string(block.timestamp) + "|" +
         to_string(block.version) + "|" +
@@ -67,227 +113,341 @@ string calculateBlockHash(const Block &block)
     return hashText(data);
 }
 
-void createGenesisBlock(Blockchain &blockchain)
+bool validProof(const Block& block)
 {
-    Block genesis;
+    string required(block.difficulty, '0');
 
-    genesis.height = 0;
-    genesis.prevHash = string(64, '0');
-    genesis.timestamp = 0;
-    genesis.version = 1;
-    genesis.txRoot = hashText("");
-    genesis.nonce = 0;
-    genesis.difficulty = 3;
-    genesis.hash = calculateBlockHash(genesis);
-
-    blockchain.chain.push_back(genesis);
-
-    cout << "\\nSukurtas Genesis blokas!" << endl;
-    cout << "Genesis hash: " << genesis.hash << endl;
+    return block.hash.substr(0, block.difficulty) == required;
 }
 
-bool mineBlock(Block &block, unsigned long long maxAttempts)
+bool mineBlock(Block& block, unsigned long long maxAttempts)
 {
-    if (block.difficulty < 0 || block.difficulty > 64)
-    {
-        return false;
-    }
-
-    string requiredZeros(block.difficulty, '0');
-
     for (unsigned long long i = 0; i < maxAttempts; i++)
     {
-        block.nonce = i;
         block.hash = calculateBlockHash(block);
 
-        if (block.hash.substr(0, block.difficulty) == requiredZeros)
+        if (validProof(block))
         {
             return true;
         }
+
+        block.nonce++;
     }
 
     return false;
 }
 
-void processTransactions(Blockchain &blockchain)
+void createGenesisBlock(Blockchain& blockchain)
 {
-    const unsigned long long maxAttempts = 1000000;
+    Block genesis;
+
+    genesis.height = 0;
+    genesis.prevHash = "0";
+    genesis.timestamp = chrono::duration_cast<chrono::seconds>(
+        chrono::system_clock::now().time_since_epoch()).count();
+
+    genesis.version = 1;
+    genesis.txRoot = hashText("GENESIS");
+    genesis.nonce = 0;
+    genesis.difficulty = 3;
+
+    mineBlock(genesis, 1000000);
+
+    blockchain.chain.push_back(genesis);
+}
+
+
+void processTransactions(Blockchain& blockchain)
+{
+    const int candidateCount = 5;
+    const int maxTransactions = 100;
+    const unsigned long long initialMiningAttempts = 100000;
+    const unsigned long long maxMiningAttempts = 1000000;
+
+    blockchain.acceptedTransactions = 0;
+    int rejectedBeforeMining = blockchain.rejectedTransactions;
 
     while (!blockchain.pool.empty())
     {
-        vector<Transaction> selectedTransactions;
-        vector<long long> tempBalances;
+        vector<Block> candidates;
 
-        for (int i = 0; i < (int)blockchain.users.size(); i++)
+        int poolSize = (int)blockchain.pool.size();
+        int candidatesTested = 0;
+
+        for (int candidateNumber = 0;
+            candidateNumber < candidateCount;
+            candidateNumber++)
         {
-            tempBalances.push_back(blockchain.users[i].balance);
-        }
+            Block block;
 
-        vector<int> order;
+            block.height = (int)blockchain.chain.size();
+            block.prevHash = blockchain.chain.back().hash;
 
-        for (int i = 0; i < (int)blockchain.pool.size(); i++)
-        {
-            order.push_back(i);
-        }
+            block.timestamp = chrono::duration_cast<chrono::seconds>(
+                chrono::system_clock::now().time_since_epoch()).count();
 
-        for (int i = 0; i < (int)order.size(); i++)
-        {
-            int j = rand() % (int)order.size();
-            int temp = order[i];
-            order[i] = order[j];
-            order[j] = temp;
-        }
+            block.version = 1;
+            block.nonce = 0;
+            block.difficulty = 3;
 
-        vector<bool> removeFromPool(blockchain.pool.size(), false);
+            vector<long long> balances;
 
-        for (int i = 0; i < (int)order.size(); i++)
-        {
-            int index = order[i];
-            Transaction transaction = blockchain.pool[index];
-
-            int sender = findUserIndex(blockchain, transaction.sender);
-            int receiver = findUserIndex(blockchain, transaction.receiver);
-
-            if (sender == -1 || receiver == -1 || sender == receiver ||
-                transaction.amount <= 0)
+            for (int i = 0; i < (int)blockchain.users.size(); i++)
             {
-                removeFromPool[index] = true;
-                blockchain.rejectedTransactions++;
+                balances.push_back(blockchain.users[i].balance);
+            }
+
+            vector<Transaction> selectedTransactions;
+
+            int startIndex = (candidateNumber * 100) % poolSize;
+
+            for (int i = 0; i < poolSize; i++)
+            {
+                if ((int)selectedTransactions.size() >= maxTransactions)
+                {
+                    break;
+                }
+
+                int transactionIndex = (startIndex + i) % poolSize;
+
+                Transaction transaction =
+                    blockchain.pool[transactionIndex];
+
+                int sender = findUserIndex(
+                    blockchain, transaction.sender);
+
+                int receiver = findUserIndex(
+                    blockchain, transaction.receiver);
+
+                if (sender == -1 || receiver == -1 || sender == receiver)
+                {
+                    continue;
+                }
+
+                if (transaction.amount <= 0 ||
+                    transaction.sequence <= 0)
+                {
+                    continue;
+                }
+
+                if (transaction.transactionId !=
+                    calculateTransactionId(transaction))
+                {
+                    continue;
+                }
+
+                if (transactionExistsInChain(
+                    blockchain, transaction.transactionId))
+                {
+                    continue;
+                }
+
+                if (transactionExistsInList(
+                    selectedTransactions, transaction.transactionId))
+                {
+                    continue;
+                }
+
+                if (balances[sender] < transaction.amount)
+                {
+                    continue;
+                }
+
+                if (balances[receiver] > LLONG_MAX - transaction.amount)
+                {
+                    continue;
+                }
+
+                balances[sender] -= transaction.amount;
+                balances[receiver] += transaction.amount;
+
+                selectedTransactions.push_back(transaction);
+            }
+
+            if (selectedTransactions.empty())
+            {
                 continue;
             }
 
-            if (transaction.transactionId != calculateTransactionId(transaction) ||
-                transactionExistsInChain(blockchain, transaction.transactionId) ||
-                transactionExistsInList(selectedTransactions, transaction.transactionId))
+            block.transactions = selectedTransactions;
+
+            block.txRoot = calculateTransactionRoot(
+                block.transactions, block.version);
+
+            candidatesTested++;
+
+            auto miningStart = chrono::steady_clock::now();
+
+            unsigned long long attemptsUsed = 0;
+            unsigned long long currentBudget = initialMiningAttempts;
+
+            bool mined = false;
+
+            while (attemptsUsed < maxMiningAttempts)
             {
-                removeFromPool[index] = true;
-                blockchain.rejectedTransactions++;
-                continue;
+                unsigned long long remaining =
+                    maxMiningAttempts - attemptsUsed;
+
+                unsigned long long attemptsThisRound =
+                    currentBudget < remaining ? currentBudget : remaining;
+
+                if (mineBlock(block, attemptsThisRound))
+                {
+                    mined = true;
+                    break;
+                }
+
+                attemptsUsed += attemptsThisRound;
+
+                currentBudget *= 2;
+            }
+            auto miningEnd = chrono::steady_clock::now();
+
+            double miningTime = chrono::duration<double, milli>(
+                miningEnd - miningStart).count();
+
+            unsigned long long candidateAttempts;
+
+            if (mined)
+            {
+                candidateAttempts = block.nonce + 1;
+                candidates.push_back(block);
+            }
+            else
+            {
+                candidateAttempts = maxMiningAttempts;
             }
 
-            if (tempBalances[sender] < transaction.amount)
-            {
-                continue;
-            }
-
-            if (tempBalances[receiver] > LLONG_MAX - transaction.amount)
-            {
-                removeFromPool[index] = true;
-                blockchain.rejectedTransactions++;
-                continue;
-            }
-
-            tempBalances[sender] -= transaction.amount;
-            tempBalances[receiver] += transaction.amount;
-            selectedTransactions.push_back(transaction);
-            removeFromPool[index] = true;
-
-            if (selectedTransactions.size() == 100)
-            {
-                break;
-            }
+            cout << "Kandidatas " << candidateNumber + 1
+                << ": transakciju: " << block.transactions.size()
+                << ", bandymu: " << candidateAttempts
+                << ", laikas: " << fixed << setprecision(2)
+                << miningTime << " ms"
+                << ", rezultatas: "
+                << (mined ? "iskastas" : "neiskastas")
+                << endl;
         }
 
-        if (selectedTransactions.empty())
+        if (candidates.empty())
         {
-            cout << "\\nNebuvo daugiau tinkamu transakciju. Likusios transakcijos atmestos." << endl;
-            blockchain.rejectedTransactions += (int)blockchain.pool.size();
-            blockchain.pool.clear();
+            cout << "Nepavyko iskasti nei vieno kandidatinio bloko!"
+                << endl;
             break;
         }
 
-        Block block;
+        int bestIndex = 0;
 
-        block.height = (int)blockchain.chain.size();
-        block.prevHash = blockchain.chain.back().hash;
-        block.timestamp = time(nullptr);
-        block.version = 1;
-        block.transactions = selectedTransactions;
-        block.txRoot = calculateTransactionRoot(block.transactions, 1);
-        block.nonce = 0;
-        block.difficulty = 3;
-
-        cout << "\\nKasamas blokas #" << block.height << "..." << endl;
-
-        auto start = chrono::steady_clock::now();
-        bool mined = mineBlock(block, maxAttempts);
-        auto end = chrono::steady_clock::now();
-
-        long long miningTime =
-            chrono::duration_cast<chrono::milliseconds>(end - start).count();
-
-        if (!mined)
+        for (int i = 1; i < (int)candidates.size(); i++)
         {
-            cout << "Nepavyko iskasti bloko per nustatyta bandymu skaiciu." << endl;
+            if (candidates[i].transactions.size() >
+                candidates[bestIndex].transactions.size())
+            {
+                bestIndex = i;
+            }
+            else if (
+                candidates[i].transactions.size() ==
+                candidates[bestIndex].transactions.size() &&
+                candidates[i].hash < candidates[bestIndex].hash)
+            {
+                bestIndex = i;
+            }
+        }
+
+        Block bestBlock = candidates[bestIndex];
+
+        if (!validateBlock(blockchain, bestBlock))
+        {
+            cout << "Laimetojo bloko patikrinimas nepavyko!"
+                << endl;
             break;
         }
 
-        if (!validateBlock(blockchain, block))
+        for (int i = 0; i < (int)bestBlock.transactions.size(); i++)
         {
-            cout << "Blokas atmestas!" << endl;
-            break;
-        }
+            const Transaction& transaction = bestBlock.transactions[i];
 
-        for (int i = 0; i < (int)block.transactions.size(); i++)
-        {
-            const Transaction &transaction = block.transactions[i];
-            int sender = findUserIndex(blockchain, transaction.sender);
-            int receiver = findUserIndex(blockchain, transaction.receiver);
+            int sender = findUserIndex(
+                blockchain, transaction.sender);
+
+            int receiver = findUserIndex(
+                blockchain, transaction.receiver);
 
             blockchain.users[sender].balance -= transaction.amount;
             blockchain.users[receiver].balance += transaction.amount;
+
+            blockchain.acceptedTransactions++;
         }
 
-        blockchain.chain.push_back(block);
-        blockchain.acceptedTransactions += (int)block.transactions.size();
+        blockchain.chain.push_back(bestBlock);
 
-        vector<Transaction> remainingTransactions;
-
-        for (int i = 0; i < (int)blockchain.pool.size(); i++)
+        for (int i = 0; i < (int)bestBlock.transactions.size(); i++)
         {
-            if (!removeFromPool[i])
+            string id = bestBlock.transactions[i].transactionId;
+
+            for (int j = 0; j < (int)blockchain.pool.size(); j++)
             {
-                remainingTransactions.push_back(blockchain.pool[i]);
+                if (blockchain.pool[j].transactionId == id)
+                {
+                    blockchain.pool.erase(
+                        blockchain.pool.begin() + j);
+                    break;
+                }
             }
         }
 
-        blockchain.pool = remainingTransactions;
-
-        cout << "Blokas sekmingai priimtas!" << endl;
-        cout << "Aukstis: " << block.height << endl;
-        cout << "Transakciju kiekis: " << block.transactions.size() << endl;
-        cout << "Block hash: " << block.hash << endl;
-        cout << "Nonce: " << block.nonce << endl;
-        cout << "Bandymu skaicius: " << block.nonce + 1 << endl;
-        cout << "Kasimo laikas: " << miningTime << " ms" << endl;
+        cout << "\nLAIMĖJĘS BLOKAS" << endl;
+        cout << "Aukstis: " << bestBlock.height << endl;
+        cout << "Transakciju: " << bestBlock.transactions.size() << endl;
+        cout << "Isbandyta kandidatu: " << candidatesTested << endl;
+        cout << "Sekmingai iskasta kandidatu: " << candidates.size() << endl;
+        cout << "Prev hash: " << bestBlock.prevHash << endl;
+        cout << "Merkle root: " << bestBlock.txRoot << endl;
+        cout << "Hash: " << bestBlock.hash << endl;
+        cout << "Difficulty: " << bestBlock.difficulty << endl;
+        cout << "Nonce: " << bestBlock.nonce << endl;
     }
+
+    blockchain.rejectedTransactions = rejectedBeforeMining;
+
+    blockchain.rejectedTransactions =
+        (int)blockchain.pool.size();
 }
 
-void printSummary(const Blockchain &blockchain)
+void printSummary(const Blockchain& blockchain)
 {
-    long long finalTotalMoney = 0;
+    cout << "\n========== BLOCKCHAIN REZULTATAI ==========" << endl;
+
+    cout << "Bloku skaicius: "
+        << blockchain.chain.size() << endl;
+
+    cout << "Patvirtintos transakcijos: "
+        << blockchain.acceptedTransactions << endl;
+
+    cout << "Atmestos transakcijos: "
+        << blockchain.rejectedTransactions << endl;
+
+    cout << "Likusios nepatvirtintos transakcijos: "
+        << blockchain.remainingTransactions << endl;
+
+    long long totalMoney = 0;
 
     for (int i = 0; i < (int)blockchain.users.size(); i++)
     {
-        finalTotalMoney += blockchain.users[i].balance;
+        totalMoney += blockchain.users[i].balance;
     }
 
-    cout << "\\n========== GALUTINE SUVESTINE ==========" << endl;
-    cout << "Vartotoju skaicius: " << blockchain.users.size() << endl;
-    cout << "Grandines bloku skaicius (be Genesis): "
-         << blockchain.chain.size() - 1 << endl;
-    cout << "Patvirtintu transakciju: " << blockchain.acceptedTransactions << endl;
-    cout << "Atmestu transakciju: " << blockchain.rejectedTransactions << endl;
-    cout << "Likusiu transakciju fonde: " << blockchain.pool.size() << endl;
-    cout << "Pradine pinigu suma: " << blockchain.initialTotalMoney << endl;
-    cout << "Galutine pinigu suma: " << finalTotalMoney << endl;
+    cout << "Pradine pinigu suma: "
+        << blockchain.initialTotalMoney << endl;
 
-    if (blockchain.initialTotalMoney == finalTotalMoney)
+    cout << "Dabartine pinigu suma: "
+        << totalMoney << endl;
+
+    if (totalMoney == blockchain.initialTotalMoney)
     {
-        cout << "Pinigu suma nepasikeite!" << endl;
+        cout << "Pinigu balansas teisingas!" << endl;
     }
     else
     {
-        cout << "KLAIDA: pinigu suma pasikeite!" << endl;
+        cout << "KLAIDA: pinigu balansas pasikeite!" << endl;
     }
 }
