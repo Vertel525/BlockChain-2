@@ -10,7 +10,7 @@ long long randomNumber(long long min, long long max)
     return min + (long long)(number % (unsigned long long)(max - min + 1));
 }
 
-void generateUsers(Blockchain &blockchain, int count)
+void generateUsers(Blockchain& blockchain, int count)
 {
     string names[10] = {
         "Jonas", "Petras", "Tomas", "Lukas", "Matas",
@@ -31,16 +31,20 @@ void generateUsers(Blockchain &blockchain, int count)
         User user;
 
         user.name = names[rand() % 10] + " " + surnames[rand() % 10];
-        user.publicKey = hashText("USER|" + to_string(i + 1)) + to_string(i + 1);
+
+        user.publicKey = hashText("USER|" + to_string(i + 1))
+            + to_string(i + 1);
+
         user.initialBalance = randomNumber(100, 1000000);
         user.balance = user.initialBalance;
 
         blockchain.initialTotalMoney += user.initialBalance;
+
         blockchain.users.push_back(user);
     }
 }
 
-int findUserIndex(const Blockchain &blockchain, string key)
+int findUserIndex(const Blockchain& blockchain, string key)
 {
     for (int i = 0; i < (int)blockchain.users.size(); i++)
     {
