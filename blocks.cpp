@@ -1,3 +1,4 @@
+
 #include "blockchain.h"
 #include "hash.h"
 #include <chrono>
@@ -5,7 +6,6 @@
 #include <sstream>
 #include <iomanip>
 #include <climits>
-
 
 using namespace std;
 
@@ -97,7 +97,6 @@ string calculateTransactionRoot(
     return hashes[0];
 }
 
-
 string calculateBlockHash(const Block& block)
 {
     string data;
@@ -156,7 +155,6 @@ void createGenesisBlock(Blockchain& blockchain)
     blockchain.chain.push_back(genesis);
 }
 
-
 void processTransactions(Blockchain& blockchain)
 {
     const int candidateCount = 5;
@@ -172,7 +170,6 @@ void processTransactions(Blockchain& blockchain)
         vector<Block> candidates;
 
         int poolSize = (int)blockchain.pool.size();
-        int candidatesTested = 0;
 
         for (int candidateNumber = 0;
             candidateNumber < candidateCount;
@@ -274,10 +271,6 @@ void processTransactions(Blockchain& blockchain)
             block.txRoot = calculateTransactionRoot(
                 block.transactions, block.version);
 
-            candidatesTested++;
-
-            auto miningStart = chrono::steady_clock::now();
-
             unsigned long long attemptsUsed = 0;
             unsigned long long currentBudget = initialMiningAttempts;
 
@@ -301,31 +294,11 @@ void processTransactions(Blockchain& blockchain)
 
                 currentBudget *= 2;
             }
-            auto miningEnd = chrono::steady_clock::now();
-
-            double miningTime = chrono::duration<double, milli>(
-                miningEnd - miningStart).count();
-
-            unsigned long long candidateAttempts;
 
             if (mined)
             {
-                candidateAttempts = block.nonce + 1;
                 candidates.push_back(block);
             }
-            else
-            {
-                candidateAttempts = maxMiningAttempts;
-            }
-
-            cout << "Kandidatas " << candidateNumber + 1
-                << ": transakciju: " << block.transactions.size()
-                << ", bandymu: " << candidateAttempts
-                << ", laikas: " << fixed << setprecision(2)
-                << miningTime << " ms"
-                << ", rezultatas: "
-                << (mined ? "iskastas" : "neiskastas")
-                << endl;
         }
 
         if (candidates.empty())
@@ -395,22 +368,14 @@ void processTransactions(Blockchain& blockchain)
             }
         }
 
-        cout << "\nLAIMĖJĘS BLOKAS" << endl;
+        cout << "\nSukurtas naujas blokas" << endl;
         cout << "Aukstis: " << bestBlock.height << endl;
-        cout << "Transakciju: " << bestBlock.transactions.size() << endl;
-        cout << "Isbandyta kandidatu: " << candidatesTested << endl;
-        cout << "Sekmingai iskasta kandidatu: " << candidates.size() << endl;
-        cout << "Prev hash: " << bestBlock.prevHash << endl;
-        cout << "Merkle root: " << bestBlock.txRoot << endl;
-        cout << "Hash: " << bestBlock.hash << endl;
-        cout << "Difficulty: " << bestBlock.difficulty << endl;
-        cout << "Nonce: " << bestBlock.nonce << endl;
+        cout << "Patvirtintos transakcijos: "
+            << bestBlock.transactions.size() << endl;
     }
 
     blockchain.rejectedTransactions = rejectedBeforeMining;
-
-    blockchain.rejectedTransactions =
-        (int)blockchain.pool.size();
+    blockchain.remainingTransactions = (int)blockchain.pool.size();
 }
 
 void printSummary(const Blockchain& blockchain)
@@ -442,12 +407,4 @@ void printSummary(const Blockchain& blockchain)
     cout << "Dabartine pinigu suma: "
         << totalMoney << endl;
 
-    if (totalMoney == blockchain.initialTotalMoney)
-    {
-        cout << "Pinigu balansas teisingas!" << endl;
-    }
-    else
-    {
-        cout << "KLAIDA: pinigu balansas pasikeite!" << endl;
-    }
 }
