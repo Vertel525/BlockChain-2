@@ -11,6 +11,7 @@ uint32_t rotateLeft(uint32_t value, int bits)
 {
     return (value << bits) | (value >> (32 - bits));
 }
+
 string hashText(string text)
 {
     uint32_t h[8] = {
@@ -69,5 +70,6 @@ string hashFile(string fileName)
     }
 
     file.close();
+
     return hashText(content);
 }
