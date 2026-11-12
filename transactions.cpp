@@ -1,6 +1,8 @@
+
 #include "blockchain.h"
 #include "hash.h"
 #include <cstdlib>
+#include <unordered_set>
 
 string transactionToString(const Transaction& transaction)
 {
@@ -67,6 +69,20 @@ void generateTransactions(Blockchain& blockchain, int count)
         return;
     }
 
+    unordered_set<string> chainIds;
+
+    for (int i = 0; i < (int)blockchain.chain.size(); i++)
+    {
+        for (int j = 0;
+            j < (int)blockchain.chain[i].transactions.size(); j++)
+        {
+            chainIds.insert(
+                blockchain.chain[i].transactions[j].transactionId);
+        }
+    }
+
+    unordered_set<string> poolIds;
+
     for (int i = 0; i < count; i++)
     {
         Transaction transaction;
@@ -87,9 +103,22 @@ void generateTransactions(Blockchain& blockchain, int count)
         transaction.transactionId =
             calculateTransactionId(transaction);
 
-        if (validateTransaction(blockchain, transaction))
+        int sender = findUserIndex(blockchain, transaction.sender);
+        int receiver = findUserIndex(blockchain, transaction.receiver);
+
+        bool valid = sender != -1 &&
+            receiver != -1 &&
+            sender != receiver &&
+            transaction.amount > 0 &&
+            transaction.sequence > 0 &&
+            transaction.transactionId == calculateTransactionId(transaction) &&
+            chainIds.find(transaction.transactionId) == chainIds.end() &&
+            poolIds.find(transaction.transactionId) == poolIds.end();
+
+        if (valid)
         {
             blockchain.pool.push_back(transaction);
+            poolIds.insert(transaction.transactionId);
         }
         else
         {
