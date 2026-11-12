@@ -1,120 +1,119 @@
-# SUPAPRASTINTA BLOKU GRANDINE
+# Supaprastina blokų grandinė
 
 ## 1. Projekto aprašymas
 
-Šio projekto tikslas – sukurti supaprastintą blokų grandinės (Blockchain) veikimo modelį naudojant C++ programavimo kalbą.
+Šiame projekte realizuota supaprastinta blokų grandinės (Blockchain) simuliacija naudojant C++ programavimo kalbą.
 
-Programa generuoja vartotojus, jų pinigų likučius ir atsitiktines transakcijas. Transakcijos tikrinamos, įtraukiamos į kandidatus į blokus, o blokai kasami naudojant Proof of Work metodą.
+Programa generuoja vartotojus ir jų transakcijas, tikrina transakcijų galiojimą, formuoja blokus ir prijungia juos prie blokų grandinės. Taip pat realizuotas Proof of Work mechanizmas, Merkle medis ir blokų validavimas.
 
-Projektas sukurtas mokymosi tikslais, siekiant suprasti pagrindinius blokų grandinės veikimo principus.
+## 2. Pagrindinės funkcijos
 
-## 2. Naudojamos technologijos
+- Vartotojų generavimas.
+- Atsitiktinių transakcijų generavimas.
+- Transakcijų galiojimo tikrinimas.
+- Vartotojų pinigų likučių atnaujinimas.
+- Genesis bloko sukūrimas.
+- Merkle medžio šaknies apskaičiavimas.
+- Blokų maišos apskaičiavimas.
+- Proof of Work mechanizmas.
+- Kelių kandidatinių blokų formavimas ir palyginimas.
+- Blokų validavimas prieš prijungiant juos prie grandinės.
+- Galutinės statistikos pateikimas.
 
-- C++
-- Visual Studio
-- STL bibliotekos
-- Individualiai sukurtas maišos (Hash) algoritmas
+## 3. Versijų pakeitimai
 
-## 3. Projekto struktūra
+### v0.1
 
-- `main.cpp` – pagrindinė programos funkcija.
-- `blockchain.h` – vartotojų, transakcijų, blokų ir blokų grandinės struktūros bei funkcijų deklaracijos.
-- `hash.h` – maišos funkcijų deklaracijos.
-- `hash.cpp` – maišos funkcijų realizacija.
-- `users.cpp` – vartotojų generavimas ir paieška.
-- `transactions.cpp` – transakcijų generavimas, ID skaičiavimas ir tikrinimas.
-- `blocks.cpp` – Merkle medžio, blokų kūrimo, kasimo ir transakcijų apdorojimo funkcijos.
-- `validation.cpp` – blokų ir Proof of Work tikrinimas.
-- `SimpleBlockChainTests` – atskiras testavimo projektas.
+Sukurta pagrindinė blokų grandinės simuliacijos struktūra ir pagrindinis programos funkcionalumas.
 
-## 4. Programos veikimas
+### v0.2
 
-Paleidus programą:
+Tobulinta transakcijų generavimo, tikrinimo ir blokų apdorojimo logika. Atlikti programos veikimo testai.
 
-1. Sugeneruojama 1000 vartotojų.
-2. Kiekvienam vartotojui priskiriamas unikalus viešasis raktas ir pradinis pinigų likutis.
-3. Sugeneruojama iki 10000 transakcijų.
-4. Sukuriamas pradinis (Genesis) blokas.
-5. Transakcijos tikrinamos ir paskirstomos į kandidatus į blokus.
-6. Sukuriami penki kandidatiniai blokai.
-7. Kandidatai kasami naudojant Proof of Work metodą.
-8. Pasirenkamas tinkamiausias iškastas kandidatas.
-9. Patikrinamas laimėjęs blokas ir atnaujinami vartotojų likučiai.
-10. Pateikiama galutinė blokų grandinės ir transakcijų suvestinė.
+### v0.3
 
-## 5. Transakcijų tikrinimas
+Atliktos programos našumo optimizacijos:
 
-Prieš priimant transakciją tikrinama:
+1. **Vartotojų paieška.** Vietoje nuoseklios paieškos panaudotas `unordered_map`, leidžiantis greičiau surasti vartotoją pagal viešąjį raktą.
+2. **Transakcijų ID paieška.** Panaudotas `unordered_set`, leidžiantis efektyviau tikrinti pasikartojančius transakcijų ID.
+3. **Transakcijų šalinimas.** Patvirtintos transakcijos iš laukiančių transakcijų sąrašo šalinamos naudojant `remove_if` kartu su `erase`.
 
-- Ar siuntėjas egzistuoja.
-- Ar gavėjas egzistuoja.
-- Ar siuntėjas ir gavėjas nėra tas pats vartotojas.
-- Ar transakcijos suma yra teigiama.
-- Ar transakcijos ID yra teisingas.
-- Ar transakcija jau nėra patvirtinta arba įtraukta į transakcijų sąrašą.
+## 4. Našumo palyginimas
 
-Taip pat tikrinama, ar siuntėjui pakanka pinigų transakcijai atlikti ir ar nebus viršyta leistina pinigų suma.
+Našumas palygintas tarp v0.2 ir v0.3 versijų.
 
-## 6. Blokų grandinės principai
+Matavimų sąlygos:
+- 1000 vartotojų.
+- 10 000 transakcijų.
+- 5 matavimų pakartojimai.
+- Pateikiamas penkių matavimų vidurkis.
+- Laikas matuojamas milisekundėmis (ms).
 
-### Merkle medis
+| Matavimas | v0.2 | v0.3 |
+|---|---:|---:|
+| Vartotojų generavimas | 74,1764 ms | 64,8821 ms |
+| Transakcijų generavimas | 20 411,5 ms | 2 451,8 ms |
 
-Transakcijų ID naudojami Merkle medžio lapams sudaryti. Kiekviename lygyje gretimi maišos rezultatai sujungiami ir iš jų apskaičiuojama nauja maišos reikšmė.
+### Rezultatų analizė
 
-Jeigu lygyje yra nelyginis elementų skaičius, paskutinis elementas dubliuojamas.
+**Vartotojų generavimas:**
+- v0.2: 74,1764 ms.
+- v0.3: 64,8821 ms.
+- Pagreitėjimas: apie 12,53 %.
 
-Gauta galutinė reikšmė vadinama Merkle šaknimi.
+**Transakcijų generavimas:**
+- v0.2: 20 411,5 ms.
+- v0.3: 2 451,8 ms.
+- Pagreitėjimas: apie 8,32 karto.
+- Vykdymo laikas sumažėjo apie 87,98 %.
 
-### Proof of Work
+Didžiausias našumo pagerėjimas pastebimas transakcijų generavimo metu. Tai rodo, kad pritaikytos paieškos optimizacijos reikšmingai sumažino šios operacijos vykdymo laiką.
 
-Blokas laikomas iškastu, kai jo maišos reikšmė atitinka nustatytą sudėtingumo lygį.
+*Pastaba: pateikti rezultatai priklauso nuo naudoto kompiuterio techninių charakteristikų ir programos vykdymo aplinkos. Blokų apdorojimo ir kasimo laikas į šiuos matavimus neįtrauktas.*
 
-Programa keičia nonce reikšmę ir pakartotinai skaičiuoja bloko maišos reikšmę, kol randamas tinkamas rezultatas arba pasiekiamas bandymų limitas.
-
-### Kandidatų pasirinkimas
-
-Kiekvienam blokų grandinės lygiui sudaromi penki kandidatiniai blokai. Jie tikrinami nepriklausomai, o tinkamiausias iškastas kandidatas pasirenkamas pagal transakcijų skaičių. Jeigu skaičius vienodas, naudojama maišos reikšmė kaip papildomas pasirinkimo kriterijus.
-
-Tik laimėjusio kandidato transakcijos įtraukiamos į blokų grandinę.
-
-## 7. Testavimas
+## 5. Automatinių testų rezultatai
 
 Projektui sukurtas atskiras `SimpleBlockChainTests` testavimo projektas.
 
-Testuojami šie atvejai:
+Atlikta 14 automatinių testų:
 
-- Pakeista transakcijos suma.
-- Neigiama transakcijos suma.
-- Nežinomas gavėjas.
-- Nepakankamas vartotojo pinigų likutis.
-- Neteisingas transakcijos ID.
-- Pasikartojantis transakcijos ID.
-- Pakartotinai pateikta jau patvirtinta transakcija.
-- Pakeistas bloko turinys.
-- Neteisingas ankstesnio bloko Hash.
-- Neteisingas Proof of Work.
-- Kelios transakcijos, kurių bendra suma viršija siuntėjo likutį.
-- Merkle medžio skaičiavimai su 1, 2, 3 ir 5 transakcijomis.
-- Pralaimėjusių kandidatų įtaka vartotojų likučiams.
-- Bendros pinigų sumos išsaugojimas.
+| Nr. | Testas | Rezultatas |
+|---:|---|---|
+| 1 | Neteisinga transakcijos suma | Pavyko |
+| 2 | Neigiama transakcijos suma | Pavyko |
+| 3 | Nežinomas gavėjas | Pavyko |
+| 4 | Nepakankamas siuntėjo likutis | Pavyko |
+| 5 | Neteisingas transakcijos ID | Pavyko |
+| 6 | Pasikartojantis transakcijos ID | Pavyko |
+| 7 | Jau patvirtintos transakcijos pakartojimas | Pavyko |
+| 8 | Pakeisto bloko turinio aptikimas | Pavyko |
+| 9 | Neteisinga ankstesnio bloko maiša | Pavyko |
+| 10 | Neteisingas Proof of Work | Pavyko |
+| 11 | Nepakankamas bendras transakcijų likutis | Pavyko |
+| 12 | Merkle medžio patikrinimas | Pavyko |
+| 13 | Pralaimėję kandidatų blokai nekeičia likučių | Pavyko |
+| 14 | Bendras pinigų kiekis išlieka nepakitęs | Pavyko |
 
-Testavimo projektas paleidžiamas atskirai nuo pagrindinės programos.
+**Galutinis testavimo rezultatas: 14 iš 14 testų sėkmingi.**
 
-## 8. Apribojimai
+Visi atlikti automatiniai testai praėjo sėkmingai. Tai patvirtina, kad tikrinami pagrindiniai transakcijų, blokų ir pinigų likučių vientisumo scenarijai veikia tinkamai.
 
-Šis projektas yra supaprastintas blokų grandinės modelis, skirtas mokymuisi.
+## 6. Programos paleidimas
 
-Jame nėra:
+Projektas sukurtas naudojant C++ ir gali būti atidaromas per Microsoft Visual Studio.
 
-- Tikro lygiaverčių mazgų (P2P) tinklo.
-- Paskirstyto konsensuso tarp nepriklausomų mazgų.
-- Tikros blokų grandinės šakų reorganizavimo mechanizmo.
-- Skaitmeninių parašų ir pilnos viešųjų bei privačiųjų raktų infrastruktūros.
+1. Atidaryti projekto sprendimo (`.sln`) failą.
+2. Pasirinkti pagrindinį programos projektą.
+3. Pasirinkti `Debug` arba `Release` konfigūraciją.
+4. Sukompiliuoti projektą.
+5. Paleisti programą.
 
-Naudojamas maišos algoritmas yra mokomasis ir nėra skirtas realiam saugumui užtikrinti.
+Automatinius testus galima vykdyti atskirai, pasirinkus `SimpleBlockChainTests` testavimo projektą.
 
-## 9. Projekto versijos
+## 7. Išvados
 
-- **v0.1** – pradinis supaprastintos blokų grandinės modelis.
-- **v0.2** – Merkle medis, transakcijų ir blokų tikrinimas, penkių kandidatų kasimas bei testavimas.
-- **v0.3** – numatyti AI pagalba pasiūlyti ir patikrinti programos patobulinimai. Šios versijos pakeitimai ir jų palyginimas su v0.2 dokumentuojami atskirai.
+Projekto metu sukurta veikianti supaprastinta blokų grandinės simuliacija. Įgyvendintos pagrindinės transakcijų ir blokų tikrinimo funkcijos, Merkle medis bei Proof of Work mechanizmas.
+
+v0.3 versijoje pritaikytos optimizacijos reikšmingai pagerino transakcijų generavimo našumą. Palyginus su v0.2 versija, transakcijų generavimas tapo maždaug 8,32 karto greitesnis.
+
+Visi 14 automatinių testų buvo sėkmingi, todėl galima teigti, kad atliktos optimizacijos nepablogino tikrinamų programos funkcijų veikimo.
