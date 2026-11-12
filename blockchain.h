@@ -34,6 +34,8 @@ struct Block
     unsigned long long nonce;
     int difficulty;
     string hash;
+    unsigned long long miningAttempts;
+    double miningTime;
     vector<Transaction> transactions;
 };
 
@@ -42,34 +44,34 @@ struct Blockchain
     vector<User> users;
     vector<Transaction> pool;
     vector<Block> chain;
+
     long long initialTotalMoney = 0;
     int acceptedTransactions = 0;
     int rejectedTransactions = 0;
+    int remainingTransactions = 0;
 };
 
-// users.cpp
-void generateUsers(Blockchain &blockchain, int count);
-int findUserIndex(const Blockchain &blockchain, string key);
+void generateUsers(Blockchain& blockchain, int count);
+int findUserIndex(const Blockchain& blockchain, string key);
 
-// transactions.cpp
-void generateTransactions(Blockchain &blockchain, int count);
+void generateTransactions(Blockchain& blockchain, int count);
 bool validateTransaction(const Blockchain& blockchain,
     const Transaction& transaction);
-string transactionToString(const Transaction &transaction);
-string calculateTransactionId(const Transaction &transaction);
-bool transactionExistsInChain(const Blockchain &blockchain, string id);
-bool transactionExistsInList(const vector<Transaction> &transactions, string id);
+string transactionToString(const Transaction& transaction);
+string calculateTransactionId(const Transaction& transaction);
 
-// blocks.cpp
-string calculateTransactionRoot(const vector<Transaction> &transactions, int version);
-string calculateBlockHash(const Block &block);
-void createGenesisBlock(Blockchain &blockchain);
-bool mineBlock(Block &block, unsigned long long maxAttempts);
-void processTransactions(Blockchain &blockchain);
-void printSummary(const Blockchain &blockchain);
+bool transactionExistsInChain(const Blockchain& blockchain, string id);
+bool transactionExistsInList(const vector<Transaction>& transactions, string id);
 
-// validation.cpp
-bool validProof(const Block &block);
-bool validateBlock(const Blockchain &blockchain, const Block &block);
+string calculateTransactionRoot(const vector<Transaction>& transactions, int version);
+string calculateBlockHash(const Block& block);
+
+void createGenesisBlock(Blockchain& blockchain);
+bool mineBlock(Block& block, unsigned long long maxAttempts);
+void processTransactions(Blockchain& blockchain);
+void printSummary(const Blockchain& blockchain);
+
+bool validProof(const Block& block);
+bool validateBlock(const Blockchain& blockchain, const Block& block);
 
 #endif
