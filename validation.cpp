@@ -1,6 +1,7 @@
 #include "blockchain.h"
 #include "hash.h"
 #include <climits>
+#include <unordered_set>
 
 using namespace std;
 
@@ -55,7 +56,18 @@ bool validateBlock(const Blockchain& blockchain, const Block& block)
         balances.push_back(blockchain.users[i].balance);
     }
 
-    vector<string> usedIds;
+    unordered_set<string> chainIds;
+
+    for (int i = 0; i < (int)blockchain.chain.size(); i++)
+    {
+        for (int j = 0; j < (int)blockchain.chain[i].transactions.size(); j++)
+        {
+            chainIds.insert(
+                blockchain.chain[i].transactions[j].transactionId);
+        }
+    }
+
+    unordered_set<string> usedIds;
 
     for (int i = 0; i < (int)block.transactions.size(); i++)
     {
@@ -79,20 +91,15 @@ bool validateBlock(const Blockchain& blockchain, const Block& block)
             return false;
         }
 
-        if (transactionExistsInChain(blockchain, transaction.transactionId))
+        if (chainIds.find(transaction.transactionId) != chainIds.end())
         {
             return false;
         }
 
-        for (int j = 0; j < (int)usedIds.size(); j++)
+        if (!usedIds.insert(transaction.transactionId).second)
         {
-            if (usedIds[j] == transaction.transactionId)
-            {
-                return false;
-            }
+            return false;
         }
-
-        usedIds.push_back(transaction.transactionId);
 
         if (balances[sender] < transaction.amount)
         {
