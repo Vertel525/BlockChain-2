@@ -1,3 +1,4 @@
+
 #include "blockchain.h"
 #include "hash.h"
 #include <cstdlib>
@@ -24,6 +25,7 @@ void generateUsers(Blockchain& blockchain, int count)
     };
 
     blockchain.users.clear();
+    blockchain.userIndexes.clear();
     blockchain.initialTotalMoney = 0;
 
     for (int i = 0; i < count; i++)
@@ -41,17 +43,17 @@ void generateUsers(Blockchain& blockchain, int count)
         blockchain.initialTotalMoney += user.initialBalance;
 
         blockchain.users.push_back(user);
+        blockchain.userIndexes[user.publicKey] = i;
     }
 }
 
 int findUserIndex(const Blockchain& blockchain, string key)
 {
-    for (int i = 0; i < (int)blockchain.users.size(); i++)
+    auto it = blockchain.userIndexes.find(key);
+
+    if (it != blockchain.userIndexes.end())
     {
-        if (blockchain.users[i].publicKey == key)
-        {
-            return i;
-        }
+        return it->second;
     }
 
     return -1;
